@@ -3,163 +3,201 @@
 <head>
   <meta charset="UTF-8">
   <title>플렉스튜디오 가견적 계산기</title>
-  <script src="https://unpkg.com/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
   <style>
-    body {font-family: Pretendard, sans-serif; max-width: 820px; margin: 20px auto; padding: 20px; line-height: 1.6; color: #333;}
-    h2 {border-bottom: 2px solid #ccc; padding-bottom: 5px;}
-    label {display: block; margin: 8px 0 4px;}
-    select, input[type=number] {width: 100%; padding: 6px; margin-bottom: 10px; box-sizing: border-box;}
-    .row {display: flex; gap: 10px; align-items: center; flex-wrap: wrap;}
-    .row > div {flex: 1; min-width: 46%;}
-    button {background: #222; color: #fff; border: none; padding: 8px 14px; cursor: pointer; margin-top: 6px;}
-    .result {white-space: pre-line; margin-top: 20px; font-size: 1.1em; font-weight: 600;}
-    .group-box {margin-bottom: 28px; padding: 14px; border: 2px solid #aaa; border-radius: 8px; background: #f0f4f8;}
-    .license-group {background: #f9f9f9; border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 18px;}
-    .license-group .row div {min-width: 45%;}
-    .task-remove {float: right; background: #f55; border-radius: 4px; padding: 2px 6px; font-size: .85em; margin-top: -8px; color: #fff;}
+    body{font-family:Pretendard,Arial,sans-serif;max-width:840px;margin:20px auto;padding:20px;line-height:1.6;color:#333}
+    h2{border-bottom:2px solid #ccc;padding-bottom:6px}
+    label{display:block;margin:8px 0 4px}
+    select,input[type=number]{width:100%;padding:6px;margin-bottom:10px;box-sizing:border-box}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row>div{flex:1;min-width:46%}
+    button{background:#222;color:#fff;border:none;padding:9px 16px;cursor:pointer;margin-top:6px}
+    table{width:100%;border-collapse:collapse;margin-top:24px}
+    th,td{border:1px solid #aaa;padding:8px;text-align:center;font-size:.94em}
+    th{background:#f0f0f0}
+    .group-box{margin-bottom:28px;padding:16px;border:2px solid #aaa;border-radius:8px;background:#f7f9fb}
+    .license-group{background:#fafafa;border:1px solid #ddd;padding:14px;border-radius:6px;margin-top:10px}
+    .highlight{font-weight:700;color:#d60000}
+    .note{font-size:.82em;color:#777;margin-bottom:6px}
+    .tooltip{position:relative;display:inline-block;cursor:help;border-bottom:1px dotted #666}
+    .tooltip .tooltiptext{visibility:hidden;width:300px;background:#333;color:#fff;text-align:left;border-radius:6px;padding:10px;position:absolute;z-index:1;bottom:125%;left:50%;margin-left:-150px;opacity:0;transition:opacity .3s;font-size:.85em}
+    .tooltip:hover .tooltiptext{visibility:visible;opacity:1}
+    #licenseWarning{color:#d60000;font-size:.9em;margin-top:4px;display:none}
   </style>
 </head>
 <body>
 <h2>플렉스튜디오 가견적 계산기</h2>
+
+<!-- 1. 구축 공수 입력 -->
 <div class="group-box">
-  <h3>1️⃣ 구축 견적 계산</h3>
-  <div id="taskContainer"></div>
-  <button onclick="addTaskBlock()">업무 항목 추가하기</button>
+  <h3>1️⃣ 구축 공수 입력
+    <span class="tooltip">[?]
+      <span class="tooltiptext">
+        ERP 견적서에 기재된 <strong>입력/조회 화면 수</strong>만 알면<br>
+        플렉스 구축 MM을 자동 산정합니다.<br>
+        멀티디바이스 대응 체크 시 총 MM × 10% 가산.
+      </span>
+    </span>
+  </h3>
+
+  <div class="row">
+    <div><label>입력 화면 수</label><input id="inputScreens" type="number" min="0" value="0"></div>
+    <div><label>조회 화면 수</label><input id="viewScreens" type="number" min="0" value="0"></div>
+    <div><label>멀티디바이스 대응</label><input id="multiDevice" type="checkbox"></div>
+    <div><label>외부 연동 수</label><input id="externalIntegrations" type="number" min="0" value="0"></div>
+    <div><label>역할별 접근제어</label><input id="roleAccess" type="checkbox"></div>
+  </div>
 </div>
+
+<!-- 2. 라이선스 선택 -->
 <div class="group-box">
-  <h3>2️⃣ 라이선스 유형 선택</h3>
+  <h3>2️⃣ 라이선스 선택</h3>
+
   <div class="license-group">
-    <label><input type="radio" name="licenseType" value="subscription" checked onclick="toggleLicense('subscription')"> 구독형</label>
-    <label><input type="radio" name="licenseType" value="fixed" onclick="toggleLicense('fixed')"> 구축형</label>
-  </div>
-  <div id="subscriptionLicense" class="license-group">
-    <h4>📄 구독형 라이선스 입력</h4>
-    <div class="row">
-      <div><label>개발자 수:</label><input type="number" id="developerCount" value="1" min="1"></div>
-      <div><label>내부 사용자 수:</label><input type="number" id="internalUsers" value="50" min="50"></div>
-    </div>
-    <div class="row">
-      <div><label>시스템 연동 수 (ERP, DB 등):</label><input type="number" id="integrationCount" value="1" min="1"></div>
-      <div><label>연 단위 할인율(%):</label><input type="number" id="discountRate" value="10"></div>
-    </div>
-    <div class="row">
-      <div>
-        <label>라이선스 결제 주기:</label>
-        <select id="billingCycle"><option value="1">월</option><option value="12">연(12개월)</option></select>
+    <label><input type="radio" name="licenseType" value="subscription" checked onchange="toggleLicense()"> 구독형</label>
+    <label><input type="radio" name="licenseType" value="fixed" onchange="toggleLicense()"> 구축형</label>
+
+    <!-- 구독형 세부 옵션 -->
+    <div id="subscriptionBox">
+      <p class="note">※ 최소 구성&nbsp;=&nbsp;개발자 1명 + DB모듈 1개 + 내부사용자 50명<br>
+         &nbsp;&nbsp;→ 월&nbsp;<strong>550,000원</strong> 미만일 경우 계산이 제한됩니다.</p>
+
+      <div class="row">
+        <div><label>개발자 계정 수 (≥1)</label><input id="devCount" type="number" min="1" value="1"></div>
+        <div><label>FlexDB 3GB 인스턴스 수</label><input id="flexdbCount" type="number" min="0" value="0"></div>
+        <div><label>DB 연동 수</label><input id="dbCount" type="number" min="0" value="0"></div>
       </div>
-      <div>
-        <label>보안사항 (월 450,000)</label>
-        <label><input type="checkbox" class="licenseOption" value="450000"> Azure AD SSO</label>
-        <label><input type="checkbox" class="licenseOption" value="450000"> AWS VPN</label>
+
+      <div><label>보안 옵션 (선택)</label>
+        <label><input id="sso" type="checkbox"> Azure AD SSO (₩450,000)</label>
+        <label><input id="vpn" type="checkbox"> AWS VPN (₩450,000)</label>
       </div>
+
+      <div class="row">
+        <div><label>내부 사용자 수 (기본 50명)</label><input id="userCount" type="number" min="50" value="50"></div>
+        <div>
+          <label>청구 주기</label>
+          <select id="billingCycle" onchange="cycleChanged()">
+            <option value="monthly">월</option>
+            <option value="yearly">연</option>
+          </select>
+        </div>
+        <div>
+          <label>연 단위 할인율&nbsp;<span class="note">(10‑40%)</span></label>
+          <input id="discountRate" type="number" min="10" max="40" value="10">
+        </div>
+      </div>
+
+      <div id="licenseWarning">⚠️ 월 55만원 미만입니다. 모듈·사용자 수를 늘려주세요.</div>
     </div>
-  </div>
-  <div id="fixedLicense" class="license-group" style="display:none">
-    <h4>🏗️ 구축형 라이선스 입력</h4>
-    <p><strong>기본 포함:</strong> 워크스페이스, 개발자 3명, FSK, 내부 사용자 500명</p>
-    <div class="row">
-      <div><label>추가 개발자 수:</label><input type="number" id="fixedDevCount" value="0"></div>
-      <div><label>추가 내부 사용자 수:</label><input type="number" id="fixedUserCount" value="0"></div>
-      <div><label>대용량 추가 사용자 수:</label><input type="number" id="bulkUserCount" value="0"></div>
+
+    <!-- 구축형 안내 -->
+    <div id="fixedBox" style="display:none;margin-top:10px">
+      <p class="note">
+        기본 포함: 개발자 1명 · DB연동 1건 · FlexDB 3GB · 내부사용자 50명<br>
+        기본 가격: <strong>₩50,000,000</strong> (일시불)<br>
+        추가 모듈은 별도 과금
+      </p>
     </div>
   </div>
 </div>
-<button onclick="calculateEstimate()">💰 가견적 계산하기</button>
-<button id="downloadBtn" onclick="exportExcel()" disabled>📥 엑셀 다운로드</button>
-<div class="result" id="result"></div>
+
+<button onclick="calculate()">💰 가견적 계산하기</button>
+
+<div id="result"></div>
+
 <script>
-function toggleLicense(t){
-  subscriptionLicense.style.display = t==='subscription' ? 'block' : 'none';
-  fixedLicense.style.display = t==='fixed' ? 'block' : 'none';
+/* ── 유틸 ───────────────────────────── */
+const comma = n => n.toLocaleString();
+
+/* ── 라이선스 토글 ────────────────────── */
+function toggleLicense(){
+  const subBox=document.getElementById('subscriptionBox');
+  const fixedBox=document.getElementById('fixedBox');
+  const type=document.querySelector('input[name=licenseType]:checked').value;
+  subBox.style.display = type==='subscription' ? 'block':'none';
+  fixedBox.style.display = type==='fixed' ? 'block':'none';
 }
-function addTaskBlock(){
-  const c=document.getElementById('taskContainer');
-  const b=document.createElement('div');
-  b.className='group-box';
-  b.innerHTML=`<button class="task-remove" onclick="this.parentNode.remove()">삭제</button>
-  <label>업무 유형:</label><select class="taskType">
-    <option>거래 프로세스형</option><option>문서 처리형</option><option>자산/설비 관리형</option>
-    <option>사용자 요청형</option><option>분석/리포트형</option></select>
-  <label>주요 화면 복잡도:</label><select class="screenGrade">
-    <option value="1.0">S-단순 조회형</option>
-    <option value="1.5">A-입력/승인형</option>
-    <option value="2.0">B-복합 조건형</option></select>
-  <label>기능 옵션:</label>
-    <label><input type="checkbox" value="0.5"> 시스템 연동</label>
-    <label><input type="checkbox" value="0.3"> 승인 프로세스</label>
-    <label><input type="checkbox" value="0.5"> 모바일 대응</label>
-    <label><input type="checkbox" value="0.3"> Excel 업/다운</label>`;
-  c.appendChild(b);
+
+/* 청구 주기 변경 → 할인 필드 활성/비활성 */
+function cycleChanged(){
+  const cycle=document.getElementById('billingCycle').value;
+  const disc=document.getElementById('discountRate');
+  if(cycle==='monthly'){disc.value=10;disc.disabled=true;}
+  else{disc.disabled=false;}
 }
-let lastSheets=null;
-function calculateEstimate(){
-  let tasks=[]; let totalMM=0;
-  document.querySelectorAll('#taskContainer .group-box').forEach((b,i)=>{
-    const type=b.querySelector('.taskType').value;
-    const screen=parseFloat(b.querySelector('.screenGrade').value);
-    let opt=0;
-    b.querySelectorAll('input[type=checkbox]:checked').forEach(o=>opt+=parseFloat(o.value));
-    const mm=screen+opt;
-    totalMM+=mm;
-    tasks.push({No:i+1,업무유형:type,화면등급:(screen).toFixed(1),옵션MM:opt.toFixed(1),총MM:mm.toFixed(1)});
-  });
-  const licenseType=document.querySelector('input[name=licenseType]:checked').value;
-  let licenseInfo={유형:licenseType};
-  if(licenseType==='subscription'){
-    let dev=Math.max(1,+developerCount.value);
-    let intg=Math.max(1,+integrationCount.value);
-    let usr=Math.max(50,+internalUsers.value);
-    developerCount.value=dev;
-    integrationCount.value=intg;
-    internalUsers.value=usr;
-    const sec=[...document.querySelectorAll('.licenseOption:checked')].length*450000;
-    const bill=+billingCycle.value;
-    const disc=+discountRate.value;
-    base=(dev*150000+intg*100000+usr*10000+sec);
-    let lic=base*bill;
-    if(bill===12)lic*=1-disc/100;
-    licenseInfo={유형:'구독형',개발자수:dev,시스템연동:intg,사용자:usr,보안비용:sec,결제주기:bill===1?'월':'연',할인율:`${disc}%`,라이선스비용:lic};
+
+/* ── 메인 계산 ───────────────────────── */
+function calculate(){
+  /* ① 구축 MM 계산 */
+  const inputMM=Number(document.getElementById('inputScreens').value)*1.0;
+  const viewMM =Number(document.getElementById('viewScreens').value)*0.6;
+  const integMM=Number(document.getElementById('externalIntegrations').value)*0.5;
+  const accessMM=document.getElementById('roleAccess').checked?0.3:0;
+  let totalMM=inputMM+viewMM+integMM+accessMM;
+  if(document.getElementById('multiDevice').checked) totalMM*=1.1;
+
+  const devCost = Math.round(totalMM*13_000_000);
+  const uiCost  = Math.round(devCost*0.30);
+  const buildCost = devCost+uiCost;
+
+  /* ② 라이선스 계산 */
+  const type=document.querySelector('input[name=licenseType]:checked').value;
+  let licCost=0, licDesc='';
+
+  if(type==='subscription'){
+    /* 필수·선택 모듈 수치 */
+    const devCnt   = Math.max(1,Number(document.getElementById('devCount').value));
+    const flexCnt  = Number(document.getElementById('flexdbCount').value);
+    const dbCnt    = Number(document.getElementById('dbCount').value);
+    const ssoChk   = document.getElementById('sso').checked;
+    const vpnChk   = document.getElementById('vpn').checked;
+    const users    = Math.max(50,Number(document.getElementById('userCount').value));
+
+    /* 모듈 가격표 */
+    const monthDev = devCnt*150_000;
+    const monthFlex= flexCnt*300_000;
+    const monthDB  = dbCnt*300_000;
+    const monthSec = (ssoChk?450_000:0)+(vpnChk?450_000:0);
+    const monthUser= 100_000 + (users>50? (users-50)*2_000 : 0);
+
+    let monthSum = monthDev + monthFlex + monthDB + monthSec + monthUser;
+
+    /* 최소 월 55만원 강제 */
+    const warn=document.getElementById('licenseWarning');
+    if(monthSum<550_000){
+      warn.style.display='block';
+      return; // 계산 중단
+    } else warn.style.display='none';
+
+    const cycle=document.getElementById('billingCycle').value;
+    const disc = cycle==='yearly' ? Math.min(Math.max(Number(document.getElementById('discountRate').value),10),40) : 0;
+
+    licCost = (cycle==='monthly')
+        ? monthSum
+        : Math.round(monthSum*12*(1-disc/100));
+
+    licDesc = `구독형 / ${cycle==='monthly'?'월 청구':`연 청구(할인 ${disc}%)`}`;
   } else {
-    const addDev=+fixedDevCount.value,addUsr=+fixedUserCount.value,bulk=+bulkUserCount.value,fixed=30000000+addDev*1500000+addUsr*100000+bulk*50000;
-    const m=fixed*0.15;
-    licenseInfo={유형:'구축형',추가Dev:addDev,추가User:addUsr,bulkUser:bulk,기본비용:fixed,유지보수:m};
+    licCost = 50_000_000;
+    licDesc = '구축형 / 일시불';
   }
-  lastSheets={tasks,licenseInfo,totalMM};
-  document.getElementById('result').innerText=`총 개발 공수: ${totalMM.toFixed(1)} MM\n라이선스 유형: ${licenseInfo.유형}`;
-  document.getElementById('downloadBtn').disabled = false;
-}
-function exportExcel(){
-  if(!lastSheets){alert('먼저 가견적을 계산하세요');return;}
-  if(typeof XLSX==='undefined'){
-    alert('XLSX 라이브러리를 불러오지 못했습니다. CSV로 대신 저장합니다.');
-    return exportCSV();
-  }
-  try {
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(lastSheets.tasks),'공수');
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([lastSheets.licenseInfo]),'라이선스');
-    XLSX.writeFile(wb,'Flextudio_Estimate.xlsx');
-  } catch(e){
-    console.error('엑셀 저장 중 오류 발생:', e);
-    alert('엑셀 저장 중 오류가 발생했습니다. 콘솔 확인 후 개발자에게 문의하세요.');
-  }
-}
-function exportCSV(){
-  const rows=[['공수 시트']];
-  rows.push(Object.keys(lastSheets.tasks[0]));
-  lastSheets.tasks.forEach(r=>rows.push(Object.values(r)));
-  rows.push([]);
-  rows.push(['라이선스 시트']);
-  rows.push(Object.keys(lastSheets.licenseInfo));
-  rows.push(Object.values(lastSheets.licenseInfo));
-  let csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='Flextudio_Estimate.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+
+  const grand = buildCost + licCost;
+
+  /* ③ 결과 출력 */
+  document.getElementById('result').innerHTML = `
+    <table>
+      <thead><tr><th>구분</th><th>내용</th><th>금액(원)</th></tr></thead><tbody>
+        <tr><td colspan="3" class="highlight">📦 구축 금액</td></tr>
+        <tr><td>총 공수</td><td>${totalMM.toFixed(2)} MM</td><td>-</td></tr>
+        <tr><td>UI/UX 컨설팅</td><td>-</td><td>${comma(uiCost)}</td></tr>
+        <tr><td>개발</td><td>-</td><td>${comma(devCost)}</td></tr>
+
+        <tr><td colspan="3" class="highlight">💳 라이선스 금액</td></tr>
+        <tr><td>라이선스</td><td>${licDesc}</td><td>${comma(licCost)}</td></tr>
+
+        <tr><td colspan="3" class="highlight">총 견적 금액 : ${comma(grand)}</td></tr>
+      </tbody></table>`;
 }
 </script>
 </body>
